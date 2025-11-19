@@ -1,6 +1,6 @@
-// eitaa.js
+// api/eitaa.js
 // ربات «لینک شیشه‌ای‌ساز تاویتا» برای ایتا
-// توکن ربات را در محیط ورسل با نام EITAA_BOT_TOKEN تنظیم کن
+// حتماً روی Vercel متغیر محیطی EITAA_BOT_TOKEN را ست کن
 
 const BOT_TOKEN = process.env.EITAA_BOT_TOKEN;
 const API_BASE = BOT_TOKEN ? `https://api.eitaa.com/bot${BOT_TOKEN}` : null;
@@ -18,11 +18,7 @@ async function sendMessage(chat_id, text, options = {}) {
     parse_mode: "HTML",
   };
 
-  // اگر کیبورد یا تنظیمات اضافه داشتیم
   if (options.reply_markup) {
-    // اینجا می‌تونیم شیء جاوااسکریپت بفرستیم؛
-    // اگر API خواست رشته باشد، می‌شود:
-    // payload.reply_markup = JSON.stringify(options.reply_markup);
     payload.reply_markup = options.reply_markup;
   }
 
@@ -42,7 +38,7 @@ async function sendMessage(chat_id, text, options = {}) {
   }
 }
 
-// -------- کمک‌تابع: ساخت JSON دکمه شیشه‌ای برای کاربر --------
+// -------- کمک‌تابع: ساخت JSON دکمه شیشه‌ای --------
 function buildInlineKeyboardJson(buttonText, buttonUrl) {
   const obj = {
     inline_keyboard: [
@@ -54,7 +50,6 @@ function buildInlineKeyboardJson(buttonText, buttonUrl) {
       ],
     ],
   };
-  // خروجی رشته‌ای برای کپی‌کردن
   return JSON.stringify(obj);
 }
 
@@ -104,7 +99,7 @@ async function handleMessage(message) {
   }
 
   const buttonText = parts[0].trim();
-  const buttonUrl = parts.slice(1).join("|").trim(); // اگر کاربر تو لینک هم '|' داشت، خراب نشه
+  const buttonUrl = parts.slice(1).join("|").trim();
 
   if (!buttonText || !buttonUrl) {
     await sendMessage(
@@ -116,7 +111,6 @@ async function handleMessage(message) {
     return;
   }
 
-  // یک پیش‌نمایش دکمه شیشه‌ای واقعی برای کاربر بفرستیم
   const replyMarkup = {
     inline_keyboard: [
       [
@@ -135,7 +129,6 @@ async function handleMessage(message) {
     { reply_markup: replyMarkup }
   );
 
-  // کد JSON آماده برای کپی‌کردن (اگر کاربر خواست خودش با API کار کنه)
   const jsonCode = buildInlineKeyboardJson(buttonText, buttonUrl);
 
   await sendMessage(
@@ -147,5 +140,23 @@ async function handleMessage(message) {
   );
 }
 
-// خروجی برای استفاده در پروژه (مثل نسخهٔ بازی کلمات)
-export { sendMessage, handleMessage };
+// -------- هندلر وبهوک برای Vercel --------
+export default async function handler(req, res) {
+  if (req.method === "POST") {
+    const update = req.body || {};
+    const message = update.message || update.edited_message;
+
+    try {
+      await handleMessage(message);
+    } catch (err) {
+      console.error("handleMessage error:", err);
+    }
+
+    // همیشه 200 برگردونیم
+    res.status(200).json({ ok: true });
+    return;
+  }
+
+  // برای GET و متدهای دیگر فقط OK
+  res.status(200).send("OK");
+}
