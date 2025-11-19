@@ -1,11 +1,16 @@
 // api/eitaa.js
-// ربات «لینک شیشه‌ای‌ساز تاویتا» برای ایتا
-// حتماً روی Vercel متغیر محیطی EITAA_BOT_TOKEN را ست کن
+// ربات «لینک شیشه‌ای‌ساز تاویتا»
+// روی Vercel متغیر محیطی زیر را ست کن:
+// EITAA_BOT_TOKEN = bot123:ABC...
 
 const BOT_TOKEN = process.env.EITAA_BOT_TOKEN;
-const API_BASE = BOT_TOKEN ? `https://api.eitaa.com/bot${BOT_TOKEN}` : null;
+const API_BASE = BOT_TOKEN
+  ? `https://api.eitaa.com/bot${BOT_TOKEN}`
+  : null;
 
-// -------- تابع عمومی برای ارسال پیام --------
+// -----------------------------------------------------
+// ارسال پیام به ایتا
+// -----------------------------------------------------
 async function sendMessage(chat_id, text, options = {}) {
   if (!API_BASE) {
     console.error("EITAA_BOT_TOKEN is missing");
@@ -23,13 +28,14 @@ async function sendMessage(chat_id, text, options = {}) {
   }
 
   try {
-    const res = await fetch(`${API_BASE}/sendMessage`, {
+    const response = await fetch(`${API_BASE}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
 
-    const data = await res.json();
+    const data = await response.json();
+
     if (!data.ok) {
       console.error("Eitaa sendMessage error:", data);
     }
@@ -38,9 +44,11 @@ async function sendMessage(chat_id, text, options = {}) {
   }
 }
 
-// -------- کمک‌تابع: ساخت JSON دکمه شیشه‌ای --------
+// -----------------------------------------------------
+// ساخت JSON دکمه شیشه‌ای
+// -----------------------------------------------------
 function buildInlineKeyboardJson(buttonText, buttonUrl) {
-  const obj = {
+  return JSON.stringify({
     inline_keyboard: [
       [
         {
@@ -49,43 +57,40 @@ function buildInlineKeyboardJson(buttonText, buttonUrl) {
         },
       ],
     ],
-  };
-  return JSON.stringify(obj);
+  });
 }
 
-// -------- متن راهنما --------
+// -----------------------------------------------------
+// پیام راهنما
+// -----------------------------------------------------
 const HELP_TEXT =
   "سلام 👋\n\n" +
   "من ربات «لینک شیشه‌ای‌ساز تاویتا» هستم.\n" +
-  "با من می‌تونی خیلی راحت برای ایتا دکمه شیشه‌ای بسازی.\n\n" +
+  "با من می‌تونی خیلی راحت دکمه شیشه‌ای بسازی ✨\n\n" +
   "فقط یک پیام بفرست به این شکل:\n" +
   "<code>متن دکمه | لینک</code>\n\n" +
   "مثال:\n" +
   "<code>عضویت در تاویتا | https://eitaa.com/tavita</code>\n\n" +
-  "من برات یک پیام با دکمهٔ شیشه‌ای می‌فرستم که می‌تونی همون رو تو کانالت فوروارد کنی 🌸" +
-  "\n\nاگر راهنمـا خواستی، دستور /help رو بفرست.";
+  "اگر راهنما خواستی دستور /help رو بفرست 🌸";
 
-// -------- منطق اصلی ربات --------
+// -----------------------------------------------------
+// منطق اصلی ربات
+// -----------------------------------------------------
 async function handleMessage(message) {
   if (!message || !message.chat) return;
 
   const chatId = message.chat.id;
   const text = (message.text || "").trim();
 
-  // /start یا شروع
-  if (text === "/start" || text === "start" || text === "شروع") {
+  // شروع / راهنما
+  if (text === "/start" || text === "/help" || text === "راهنما") {
     await sendMessage(chatId, HELP_TEXT);
     return;
   }
 
-  // /help
-  if (text === "/help" || text === "راهنما" || text === "کمک") {
-    await sendMessage(chatId, HELP_TEXT);
-    return;
-  }
-
-  // انتظار داریم فرمت "متن دکمه | لینک" باشد
+  // انتظار داریم متن دکمه | لینک باشد
   const parts = text.split("|");
+
   if (parts.length < 2) {
     await sendMessage(
       chatId,
@@ -93,7 +98,7 @@ async function handleMessage(message) {
         "لطفاً این‌طوری بفرست:\n" +
         "<code>متن دکمه | لینک</code>\n\n" +
         "مثال:\n" +
-        "<code>عضویت در تاویتا | https://eitaa.com/tavita</code>"
+        "<code>دنبال کردن کانال | https://eitaa.com/yourchannel</code>"
     );
     return;
   }
@@ -104,13 +109,14 @@ async function handleMessage(message) {
   if (!buttonText || !buttonUrl) {
     await sendMessage(
       chatId,
-      "متن دکمه یا لینکت خالیه 🧐\n\n" +
-        "مثال صحیح:\n" +
-        "<code>عضویت در تاویتا | https://eitaa.com/tavita</code>"
+      "متن دکمه یا لینک خالیه 🧐\n\n" +
+        "مثال:\n" +
+        "<code>عضویت در کانال | https://eitaa.com/yourpage</code>"
     );
     return;
   }
 
+  // ساخت دکمه شیشه‌ای
   const replyMarkup = {
     inline_keyboard: [
       [
@@ -122,29 +128,35 @@ async function handleMessage(message) {
     ],
   };
 
+  // ارسال پیش‌نمایش دکمه
   await sendMessage(
     chatId,
     "پیش‌نمایش دکمه شیشه‌ای 👇\n\n" +
-      "این پیام رو می‌تونی مستقیماً در کانال‌ات فوروارد کنی تا دکمه زیر پست دیده بشه.",
+      "این پیام را می‌تونی مستقیم توی کانالت فوروارد کنی ✨",
     { reply_markup: replyMarkup }
   );
 
+  // ارسال JSON دکمه
   const jsonCode = buildInlineKeyboardJson(buttonText, buttonUrl);
 
   await sendMessage(
     chatId,
-    "کد JSON آمادهٔ دکمه شیشه‌ای (برای کار با API یا ربات‌های دیگه):\n\n" +
-      "<code>" +
-      jsonCode +
-      "</code>"
+    "کد JSON دکمه شیشه‌ای:\n\n" +
+      `<code>${jsonCode}</code>`
   );
 }
 
-// -------- هندلر وبهوک برای Vercel --------
+// -----------------------------------------------------
+// هندلر Vercel برای وبهوک ایتا
+// -----------------------------------------------------
 export default async function handler(req, res) {
   if (req.method === "POST") {
     const update = req.body || {};
-    const message = update.message || update.edited_message;
+    const message =
+      update.message ||
+      update.edited_message ||
+      update.channel_post ||
+      update.edited_channel_post;
 
     try {
       await handleMessage(message);
@@ -152,11 +164,9 @@ export default async function handler(req, res) {
       console.error("handleMessage error:", err);
     }
 
-    // همیشه 200 برگردونیم
     res.status(200).json({ ok: true });
     return;
   }
 
-  // برای GET و متدهای دیگر فقط OK
   res.status(200).send("OK");
 }
