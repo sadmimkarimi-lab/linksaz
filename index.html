@@ -1,162 +1,285 @@
-// api/eitaa.js
-// ربات «لینک شیشه‌ای‌ساز تاویتا» برای ایتا
-// حتماً روی Vercel متغیر محیطی EITAA_BOT_TOKEN را ست کن
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <title>لینک‌ساز ایتا | تاویتا</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
 
-const BOT_TOKEN = process.env.EITAA_BOT_TOKEN;
-const API_BASE = BOT_TOKEN ? `https://api.eitaa.com/bot${BOT_TOKEN}` : null;
+    body {
+      margin: 0;
+      padding: 0;
+      background: #0f172a;
+      color: #e5e7eb;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+    }
 
-// -------- تابع عمومی برای ارسال پیام --------
-async function sendMessage(chat_id, text, options = {}) {
-  if (!API_BASE) {
-    console.error("EITAA_BOT_TOKEN is missing");
-    return;
-  }
+    .container {
+      width: 100%;
+      max-width: 640px;
+      margin: 24px;
+      background: #020617;
+      border-radius: 16px;
+      padding: 20px 20px 24px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+      border: 1px solid #1f2937;
+    }
 
-  const payload = {
-    chat_id,
-    text,
-    parse_mode: "HTML",
-  };
+    h1 {
+      margin: 0 0 8px;
+      font-size: 1.4rem;
+      color: #f9fafb;
+      text-align: center;
+    }
 
-  if (options.reply_markup) {
-    payload.reply_markup = options.reply_markup;
-  }
+    .subtitle {
+      font-size: 0.9rem;
+      color: #9ca3af;
+      text-align: center;
+      margin-bottom: 20px;
+    }
 
-  try {
-    const res = await fetch(`${API_BASE}/sendMessage`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+    label {
+      display: block;
+      font-size: 0.9rem;
+      margin-bottom: 4px;
+      color: #e5e7eb;
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid #374151;
+      background: #020617;
+      color: #e5e7eb;
+      font-size: 0.9rem;
+      outline: none;
+    }
+
+    input:focus, textarea:focus {
+      border-color: #38bdf8;
+      box-shadow: 0 0 0 1px rgba(56,189,248,0.4);
+    }
+
+    textarea {
+      min-height: 90px;
+      resize: vertical;
+    }
+
+    .field {
+      margin-bottom: 14px;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    button {
+      flex: 1;
+      border: none;
+      border-radius: 999px;
+      padding: 10px 14px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      background: #0ea5e9;
+      color: #0b1120;
+      font-weight: 600;
+      transition: transform 0.1s ease, box-shadow 0.1s ease, opacity 0.1s ease;
+    }
+
+    button.secondary {
+      background: #111827;
+      color: #e5e7eb;
+      border: 1px solid #374151;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 20px rgba(15,118,178,0.5);
+    }
+
+    button:active {
+      transform: translateY(0);
+      box-shadow: none;
+      opacity: 0.9;
+    }
+
+    .output-box {
+      background: #020617;
+      border-radius: 12px;
+      border: 1px solid #1f2937;
+      padding: 10px 12px;
+      margin-bottom: 14px;
+    }
+
+    .output-label {
+      font-size: 0.8rem;
+      color: #9ca3af;
+      margin-bottom: 6px;
+    }
+
+    .small {
+      font-size: 0.8rem;
+      color: #9ca3af;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.75rem;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: #111827;
+      color: #9ca3af;
+      margin-bottom: 12px;
+    }
+
+    .footer {
+      margin-top: 10px;
+      text-align: center;
+      font-size: 0.75rem;
+      color: #6b7280;
+    }
+
+    .footer a {
+      color: #38bdf8;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>لینک‌ساز ایتا – تاویتا</h1>
+    <div class="subtitle">
+      متن دکمه و لینک رو وارد کن، بقیه کارها رو این صفحه و ربات برات انجام می‌دن ✨
+    </div>
+
+    <div class="badge">
+      <span>فرمت مورد نیاز ربات:</span>
+      <code>متن دکمه | لینک</code>
+    </div>
+
+    <div class="field">
+      <label for="btnText">متن دکمه</label>
+      <input id="btnText" type="text" placeholder="مثال: عضویت در تاویتا" />
+    </div>
+
+    <div class="field">
+      <label for="btnUrl">لینک</label>
+      <input id="btnUrl" type="text" placeholder="مثال: https://eitaa.com/tavita" />
+    </div>
+
+    <div class="btn-row">
+      <button id="generateBtn">ساخت لینک شیشه‌ای</button>
+      <button class="secondary" id="clearBtn">پاک‌کردن فرم</button>
+    </div>
+
+    <div class="output-box">
+      <div class="output-label">متن آماده برای ارسال به ربات ایتا (فرمت: متن دکمه | لینک)</div>
+      <textarea id="botText" readonly></textarea>
+      <div class="btn-row" style="margin-top:8px;">
+        <button id="copyBotText">کپی متن برای ربات</button>
+      </div>
+    </div>
+
+    <div class="output-box">
+      <div class="output-label">کد JSON دکمه شیشه‌ای (برای برنامه‌نویسی / API)</div>
+      <textarea id="jsonOutput" readonly></textarea>
+      <div class="btn-row" style="margin-top:8px;">
+        <button id="copyJson">کپی JSON</button>
+      </div>
+      <div class="small">
+        این JSON همون ساختار inline_keyboard در ایتاست؛ اگر با API کار می‌کنی می‌تونی مستقیم ازش استفاده کنی.
+      </div>
+    </div>
+
+    <div class="footer">
+      ساخته شده با ❤️ توسط تاویتا  
+    </div>
+  </div>
+
+  <script>
+    const btnTextInput = document.getElementById("btnText");
+    const btnUrlInput = document.getElementById("btnUrl");
+    const botTextArea = document.getElementById("botText");
+    const jsonOutput = document.getElementById("jsonOutput");
+
+    const generateBtn = document.getElementById("generateBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const copyBotTextBtn = document.getElementById("copyBotText");
+    const copyJsonBtn = document.getElementById("copyJson");
+
+    function generateOutputs() {
+      const text = btnTextInput.value.trim();
+      const url = btnUrlInput.value.trim();
+
+      if (!text || !url) {
+        alert("لطفاً هم متن دکمه و هم لینک را وارد کن 🌸");
+        return;
+      }
+
+      // متن مورد نیاز برای ربات (فرمت: متن دکمه | لینک)
+      const botFormat = text + " | " + url;
+      botTextArea.value = botFormat;
+
+      // JSON دکمه شیشه‌ای
+      const obj = {
+        inline_keyboard: [
+          [
+            {
+              text: text,
+              url: url
+            }
+          ]
+        ]
+      };
+      jsonOutput.value = JSON.stringify(obj, null, 2);
+    }
+
+    function clearForm() {
+      btnTextInput.value = "";
+      btnUrlInput.value = "";
+      botTextArea.value = "";
+      jsonOutput.value = "";
+      btnTextInput.focus();
+    }
+
+    async function copyToClipboard(el) {
+      const value = el.value.trim();
+      if (!value) return;
+      try {
+        await navigator.clipboard.writeText(value);
+        alert("کپی شد ✅");
+      } catch (err) {
+        console.error(err);
+        alert("مرورگر اجازه کپی نداد، لطفاً دستی کپی کن.");
+      }
+    }
+
+    generateBtn.addEventListener("click", generateOutputs);
+    clearBtn.addEventListener("click", clearForm);
+
+    copyBotTextBtn.addEventListener("click", () => copyToClipboard(botTextArea));
+    copyJsonBtn.addEventListener("click", () => copyToClipboard(jsonOutput));
+
+    // اگر کاربر اینتر بزند در لینک، خروجی ساخته شود
+    btnUrlInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        generateOutputs();
+      }
     });
-
-    const data = await res.json();
-    if (!data.ok) {
-      console.error("Eitaa sendMessage error:", data);
-    }
-  } catch (err) {
-    console.error("Error sending message:", err);
-  }
-}
-
-// -------- کمک‌تابع: ساخت JSON دکمه شیشه‌ای --------
-function buildInlineKeyboardJson(buttonText, buttonUrl) {
-  const obj = {
-    inline_keyboard: [
-      [
-        {
-          text: buttonText,
-          url: buttonUrl,
-        },
-      ],
-    ],
-  };
-  return JSON.stringify(obj);
-}
-
-// -------- متن راهنما --------
-const HELP_TEXT =
-  "سلام 👋\n\n" +
-  "من ربات «لینک شیشه‌ای‌ساز تاویتا» هستم.\n" +
-  "با من می‌تونی خیلی راحت برای ایتا دکمه شیشه‌ای بسازی.\n\n" +
-  "فقط یک پیام بفرست به این شکل:\n" +
-  "<code>متن دکمه | لینک</code>\n\n" +
-  "مثال:\n" +
-  "<code>عضویت در تاویتا | https://eitaa.com/tavita</code>\n\n" +
-  "من برات یک پیام با دکمهٔ شیشه‌ای می‌فرستم که می‌تونی همون رو تو کانالت فوروارد کنی 🌸" +
-  "\n\nاگر راهنمـا خواستی، دستور /help رو بفرست.";
-
-// -------- منطق اصلی ربات --------
-async function handleMessage(message) {
-  if (!message || !message.chat) return;
-
-  const chatId = message.chat.id;
-  const text = (message.text || "").trim();
-
-  // /start یا شروع
-  if (text === "/start" || text === "start" || text === "شروع") {
-    await sendMessage(chatId, HELP_TEXT);
-    return;
-  }
-
-  // /help
-  if (text === "/help" || text === "راهنما" || text === "کمک") {
-    await sendMessage(chatId, HELP_TEXT);
-    return;
-  }
-
-  // انتظار داریم فرمت "متن دکمه | لینک" باشد
-  const parts = text.split("|");
-  if (parts.length < 2) {
-    await sendMessage(
-      chatId,
-      "فرمت پیام درست نیست 😅\n\n" +
-        "لطفاً این‌طوری بفرست:\n" +
-        "<code>متن دکمه | لینک</code>\n\n" +
-        "مثال:\n" +
-        "<code>عضویت در تاویتا | https://eitaa.com/tavita</code>"
-    );
-    return;
-  }
-
-  const buttonText = parts[0].trim();
-  const buttonUrl = parts.slice(1).join("|").trim();
-
-  if (!buttonText || !buttonUrl) {
-    await sendMessage(
-      chatId,
-      "متن دکمه یا لینکت خالیه 🧐\n\n" +
-        "مثال صحیح:\n" +
-        "<code>عضویت در تاویتا | https://eitaa.com/tavita</code>"
-    );
-    return;
-  }
-
-  const replyMarkup = {
-    inline_keyboard: [
-      [
-        {
-          text: buttonText,
-          url: buttonUrl,
-        },
-      ],
-    ],
-  };
-
-  await sendMessage(
-    chatId,
-    "پیش‌نمایش دکمه شیشه‌ای 👇\n\n" +
-      "این پیام رو می‌تونی مستقیماً در کانال‌ات فوروارد کنی تا دکمه زیر پست دیده بشه.",
-    { reply_markup: replyMarkup }
-  );
-
-  const jsonCode = buildInlineKeyboardJson(buttonText, buttonUrl);
-
-  await sendMessage(
-    chatId,
-    "کد JSON آمادهٔ دکمه شیشه‌ای (برای کار با API یا ربات‌های دیگه):\n\n" +
-      "<code>" +
-      jsonCode +
-      "</code>"
-  );
-}
-
-// -------- هندلر وبهوک برای Vercel --------
-export default async function handler(req, res) {
-  if (req.method === "POST") {
-    const update = req.body || {};
-    const message = update.message || update.edited_message;
-
-    try {
-      await handleMessage(message);
-    } catch (err) {
-      console.error("handleMessage error:", err);
-    }
-
-    // همیشه 200 برگردونیم
-    res.status(200).json({ ok: true });
-    return;
-  }
-
-  // برای GET و متدهای دیگر فقط OK
-  res.status(200).send("OK");
-}
+  </script>
+</body>
+</html>
